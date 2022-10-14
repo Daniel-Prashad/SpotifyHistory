@@ -1,8 +1,8 @@
-from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks, DATABASE_LOCATION
-from SpotifyHistory.view_listening_history import get_most_listened
-import sqlalchemy
-import pandas as pd
-import os
+from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks
+from SpotifyHistory.view_listening_history import get_days_history, get_most_listened
+import re
+from tabulate import tabulate
+
 
 def main_menu():
     '''() -> str
@@ -13,8 +13,8 @@ def main_menu():
 
     # display the menu
     print("[1] - Add today's tracks to your all-time history")
-    print("[2] - View your all time listening history")
-    print("[3] - View your most listened to tracks, artists or albums")
+    print("[2] - View your listening history from a certain day")
+    print("[3] - View your most listened to tracks, artists or albums of all time")
     print("[0] - Exit program")
 
     # prompt for, store and return the user's selection, ensuring that the input is valid
@@ -27,11 +27,12 @@ def main_menu():
     if inp == '1':
         etl_todays_tracks()
     elif inp == '2':
-        view_complete_history()
+        view_days_history()
     elif inp == '3':
         view_most_listened()
     elif inp == '0':
         quit()
+
 
 def etl_todays_tracks():
     '''() -> Nonetype
@@ -43,22 +44,40 @@ def etl_todays_tracks():
         print("Please copy and paste the Spotify Token here (or type 'quit' to return to the main menu):")
         inp_token = input("> ")
         if inp_token.lower() == 'quit':
-            main_menu()
+            bad_token = False
             break
         raw_data = extract_todays_tracks(inp_token)
         track_df, bad_token = transform_todays_tracks(raw_data)
     # once the data is of a proper form, load the data into the database
-    load_todays_tracks(track_df)
+    if inp_token.lower() != 'quit':
+        load_todays_tracks(track_df)
+        print("Today's tracks successfully loaded!")
+    main_menu()
 
 
-def view_complete_history():
+def view_days_history():
     '''() -> Nonetype
-    This function displays the user's complete listening history.
+    This function displays the user's complete listening history of a given day.
     '''
-    engine = sqlalchemy.create_engine(DATABASE_LOCATION)
-    select_query = pd.read_sql_query(sql="SELECT * FROM complete_listening_history ORDER BY time_played DESC;", con=engine)
-    df = pd.DataFrame(select_query, columns=['track_name', 'artist_name', 'album_name', 'release_date', 'date_played', 'time_played'])
-    print(df)
+    # ensure that the date provided is valid
+    run = True
+    while run:
+        inp_date = input("Please enter day for which you would like to see your listening history in YYYY-mm-dd format (or type 'quit' to return to the main menu): ")
+        if inp_date.lower() == 'quit':
+            main_menu()
+            run = False
+        elif re.match('^[0-9]{4}-[0-1]{1}[0-9]{1}-[0-3]{1}[0-9]{1}$', inp_date):
+            run = False
+        else:
+            print("Invalid date provided.")
+    # output the user's listening history for the provided date
+    if inp_date != 'quit':
+        df = get_days_history(inp_date)
+        if df.empty:
+            print("There are no recorded songs for this date.")
+        else:
+            print(tabulate(df, headers="keys", tablefmt="fancy_outline"))
+
 
 def view_most_listened():
     '''() -> Nonetype
@@ -98,4 +117,5 @@ def view_most_listened():
 
         # get and display the information of interest using the user's input
         most_listened_df = get_most_listened(options[inp], limit_options[limit_inp])
-        print(most_listened_df)
+        print(tabulate(most_listened_df, headers="keys" ,tablefmt="fancy_outline"))
+
