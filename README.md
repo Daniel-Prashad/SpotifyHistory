@@ -3,7 +3,7 @@ This program creates and manages a database contining the user's Spotify listeni
 
 # Instructions
 1. Download all files and ensure that the file structure is maintained.
-2. Open a new terminal and change your current working directory to the SpotifyHistory folder downloaded in step 1.
+2. Open a new terminal and change your current working directory to the folder downloaded in step 1.
 3. It is recommended to create and activate a virtual environment before continuing.
 3. Ensure that the below python libraries are installed by running the following:
    * pip install pandas
@@ -12,7 +12,7 @@ This program creates and manages a database contining the user's Spotify listeni
 4. To start the program, run the following command:
    * python main.py
 5. To add the current day's listening history:
-   a. Select the first option from the menu
+   <br />a. Select the first option from the menu
    b. Open the following link in your web browser: https://developer.spotify.com/console/get-recently-played/
       * Note that in order to continue you will need to be logged into your Spotify account and allow access to pull your recently played tracks
    c. Click "Get Token"
