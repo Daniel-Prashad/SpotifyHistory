@@ -16,7 +16,7 @@ This program creates and manages a database contining the user's Spotify listeni
    * Open the following link in your web browser: https://developer.spotify.com/console/get-recently-played/
       * Note that in order to continue you will need to be logged into your Spotify account and allow access to pull your recently played tracks
    * Click "Get Token"
-   * Click the checkbox next to "user-read_recently_played"
+   * Click the checkbox next to "user-read-recently-played"
    * Click "Request Token"
-   * Copy the full token under "OAuth Token"
+   * Copy the entire token under "OAuth Token"
    * Returning to the program, right click in the terminal to paste the copied token in the previous step and press the Enter key to finish
