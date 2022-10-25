@@ -12,11 +12,11 @@ This program creates and manages a database contining the user's Spotify listeni
 4. To start the program, run the following command:
    * python main.py
 5. To add the current day's listening history:
-   <br />a. Select the first option from the menu
-   b. Open the following link in your web browser: https://developer.spotify.com/console/get-recently-played/
+   * Select the first option from the menu
+   * Open the following link in your web browser: https://developer.spotify.com/console/get-recently-played/
       * Note that in order to continue you will need to be logged into your Spotify account and allow access to pull your recently played tracks
-   c. Click "Get Token"
-   d. Click the checkbox next to "user-read_recently_played"
-   e. Click "Request Token"
-   f. Copy the full token under "OAuth Token"
-   g. Returning to the program, right click in the terminal to paste the copied token in the previous step and press the Enter key to finish
+   * Click "Get Token"
+   * Click the checkbox next to "user-read_recently_played"
+   * Click "Request Token"
+   * Copy the full token under "OAuth Token"
+   * Returning to the program, right click in the terminal to paste the copied token in the previous step and press the Enter key to finish
