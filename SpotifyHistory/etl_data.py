@@ -1,8 +1,12 @@
-import requests
 import pandas as pd
 import sqlite3
 import sqlalchemy
 import datetime
+import base64
+import json
+import webbrowser
+from requests import post, get
+from urllib.parse import urlencode
 
 DATABASE_LOCATION = "sqlite:///my_listening_history.sqlite"
 
@@ -31,8 +35,55 @@ def check_data_is_valid(df):
 
     return True
 
+def authorize_user(client_id):
+    '''(str) -> str
+    This function uses the Spotify Web API to generate an authorization code to validate the user.
+    '''
+    # define the url and HTTP headers to send to the url
+    url = "https://accounts.spotify.com/authorize?"
+    headers = {
+        "client_id": client_id,
+        "response_type": "code",
+        "redirect_uri": "http://localhost:8888/callback",
+        "scope": "user-read-recently-played"
+    }
+    # prompt the user to copy and paste the authorization code in the url from the window opened by the API call
+    webbrowser.open(url + urlencode(headers))
+    print("Please copy and paste the code provided in the url (or type 'quit' to return to the main menu):")
+    auth_code = input("> ")
+    return(auth_code)
 
-def extract_todays_tracks(token):
+
+def get_access_token(client_id, client_secret, auth_code):
+    '''(str, str, str) -> str, Boolean
+    Given the client credentials and authorization code, this function uses the Spotify Web API to generate an access token.
+    '''
+    # encode the client credentials to base64
+    auth_string = client_id + ":" + client_secret
+    auth_bytes = auth_string.encode("utf-8")
+    auth_base64 = str(base64.b64encode(auth_bytes), "utf-8")
+    # define the url, HTTP headers and additional data to send to the url
+    url = "https://accounts.spotify.com/api/token?"
+    headers = {
+        "Authorization": "Basic " + auth_base64,
+        "Content_Type": "application/x-www-form-urlencoded"
+    }
+    data = {"grant_type": "authorization_code",
+            "code": auth_code,
+            "redirect_uri": "http://localhost:8888/callback"}
+    # request and return the access token
+    try:
+        result = post(url, headers=headers, data=data)
+        json_result = json.loads(result.content)
+        access_token = json_result['access_token']
+        return(access_token, False)
+    # if the access token could not be retrieved then allow the user to copy and paste a new authorization code
+    except:
+        print("Invalid authorization code. Launching a new window to generate a new code ...")
+        return("" , True)
+
+
+def extract_todays_tracks(access_token):
     '''(str) -> dict
     This function uses an authorization token from Spotify in order to extract the user's listening history from the current day.
     '''
@@ -42,11 +93,11 @@ def extract_todays_tracks(token):
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}"
+        "Authorization": f"Bearer {access_token}"
     }
     # request, store and return the raw data from the Spotify API
-    r = requests.get(f"https://api.spotify.com/v1/me/player/recently-played?limit=50&after={today_unix_timestamp}", headers = headers)
-    raw_data = r.json()      
+    r = get(f"https://api.spotify.com/v1/me/player/recently-played?limit=50&after={today_unix_timestamp}", headers = headers)
+    raw_data = r.json()
     return(raw_data)
 
 
@@ -56,14 +107,14 @@ def transform_todays_tracks(raw_data):
     into a dataframe so that today's tracks can be added to the database containing the user's complete listening history.
     '''
     # initialize the lists of attributes of interest that will be recorded from the raw data
-    # and assume that the token provided was valid 
+    # and assume that the data will be transformed into the valid format 
     track_names = []
     artist_names = []
     album_names = []
     release_dates = []
     date_played = []
     time_played = []
-    bad_token = False
+    transform_valid = True
 
     # loop through each track and append each attribute of the current track to the appropriate list
     try:
@@ -76,8 +127,8 @@ def transform_todays_tracks(raw_data):
             time_played.append(track['played_at'])
     # otherwise, notify the user that an invalid token was provided
     except:
-        print("Invalid token. Please generate a new token and try again.")
-        bad_token = True
+        print("There was a problem transforming your data.")
+        transform_valid = False
 
     # create a dictionary using the created lists
     track_dict = {
@@ -93,10 +144,10 @@ def transform_todays_tracks(raw_data):
     track_df = pd.DataFrame(track_dict, columns=['track_name', 'artist_name', 'album_name', 'release_date', 'date_played', 'time_played'])
 
     # validate and return the data
-    if bad_token:
-        return track_df, bad_token
-    if check_data_is_valid(track_df):
-        return track_df, bad_token
+    if check_data_is_valid(track_df) and transform_valid:
+        return track_df, True
+    else:
+        return track_df, False
 
 
 def load_todays_tracks(track_df):  

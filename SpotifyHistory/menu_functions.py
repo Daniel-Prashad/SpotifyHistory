@@ -1,6 +1,8 @@
-from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks
+from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks, get_access_token, authorize_user
 from SpotifyHistory.view_listening_history import get_days_history, get_most_listened
 import re
+import os
+from dotenv import load_dotenv
 from tabulate import tabulate
 
 
@@ -33,25 +35,42 @@ def main_menu():
     elif inp == '0':
         quit()
 
+def get_client_creds():
+    '''() -> str, str
+    This function reads and returns the client credential information from the .env file.
+    '''
+    load_dotenv()
+    client_id = os.getenv("CLIENT_ID")
+    client_secret = os.getenv("CLIENT_SECRET")
+    return client_id, client_secret
 
 def etl_todays_tracks():
     '''() -> Nonetype
-    This function ensures that a valid token is provided and calls each function involved in the ETL process.
+    This function ensures that a valid authorization code and access token are provided and calls each function involved in the ETL process.
     '''
-    bad_token = True
-    # prompt the user to provide a valid token and extract and transform the data
-    while bad_token:
-        print("Please copy and paste the Spotify Token here (or type 'quit' to return to the main menu):")
-        inp_token = input("> ")
-        if inp_token.lower() == 'quit':
-            bad_token = False
+    # store the client credential information
+    client_id, client_secret = get_client_creds()
+    bad_code = True
+    # prompt the user to provide a valid authorization code and ensure that a valid access token is granted
+    while bad_code:
+        auth_code = authorize_user(client_id)
+        if auth_code.lower() == 'quit':
+            bad_code = False
             break
-        raw_data = extract_todays_tracks(inp_token)
-        track_df, bad_token = transform_todays_tracks(raw_data)
-    # once the data is of a proper form, load the data into the database
-    if inp_token.lower() != 'quit':
-        load_todays_tracks(track_df)
-        print("Today's tracks successfully loaded!")
+        access_token, bad_code = get_access_token(client_id, client_secret, auth_code)
+    # using the valid access token, extract the data and transform it to the desired format
+    if auth_code.lower() != 'quit':
+        raw_data = extract_todays_tracks(access_token)
+        track_df, data_valid = transform_todays_tracks(raw_data)
+        # once the data is of a proper form, load the data into the database
+        if data_valid:
+            load_todays_tracks(track_df)
+            print("Today's tracks successfully loaded!")
+        else:
+            print("Today's tracks were not loaded!")
+            print("It looks like there were no new songs to add.")
+            print("Try listening to a few songs, then try again.")
+            print("Returning to main menu.")
     main_menu()
 
 
