@@ -5,6 +5,7 @@ import datetime
 import base64
 import json
 import webbrowser
+from dateutil import parser
 from requests import post, get
 from urllib.parse import urlencode
 
@@ -18,6 +19,17 @@ def get_today_unix_timestamp():
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     today_unix_timestamp = int(today.timestamp()) * 1000
     return today_unix_timestamp
+
+
+def convert_to_local_time(time_played_utc):
+    '''(str) -> str, str
+    This function converts the time_played attribute of each track from UTC to local time.
+    '''
+    utc = parser.parse(time_played_utc)
+    local = utc.astimezone()
+    local_time_played = local.strftime("%Y-%m-%d %H:%M:%S:%f")
+    local_date_played = local.strftime("%Y-%m-%d")
+    return(local_time_played, local_date_played)
 
 
 def check_data_is_valid(df):
@@ -123,8 +135,10 @@ def transform_todays_tracks(raw_data):
             artist_names.append(track['track']['album']['artists'][0]['name'])
             album_names.append(track['track']['album']['name'])
             release_dates.append(track['track']['album']['release_date'])
-            date_played.append(track['played_at'][0:10])
-            time_played.append(track['played_at'])
+            time_played_utc = track['played_at']
+            local_time_played, local_date_played = convert_to_local_time(time_played_utc)
+            date_played.append(local_date_played)
+            time_played.append(local_time_played)
     # otherwise, notify the user that an invalid token was provided
     except:
         print("There was a problem transforming your data.")
