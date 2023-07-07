@@ -27,9 +27,22 @@ def convert_to_local_time(time_played_utc):
     '''
     utc = parser.parse(time_played_utc)
     local = utc.astimezone()
-    local_time_played = local.strftime("%Y-%m-%d %H:%M:%S:%f")
+    local_date_time_played = local.strftime("%Y-%m-%d %H:%M:%S:%f")[:-3]
     local_date_played = local.strftime("%Y-%m-%d")
-    return(local_time_played, local_date_played)
+    local_time_played = local.strftime("%H:%M:%S:%f")[:-3]
+    return(local_date_time_played, local_date_played, local_time_played)
+
+
+def convert_duration(duration_ms):
+    '''(int) -> str
+    This function converts the duration of a song from milliseconds to minutes and seconds to be displayed to the user.
+    '''
+    secs = str(int(duration_ms/1000)%60)
+    mins = str(int(duration_ms/(1000*60))%60)
+    if len(secs) == 1:
+        secs = secs + "0"
+    duration_display = mins + ":" + secs
+    return(duration_display)
 
 
 def check_data_is_valid(df):
@@ -120,12 +133,7 @@ def transform_todays_tracks(raw_data):
     '''
     # initialize the lists of attributes of interest that will be recorded from the raw data
     # and assume that the data will be transformed into the valid format 
-    track_names = []
-    artist_names = []
-    album_names = []
-    release_dates = []
-    date_played = []
-    time_played = []
+    track_names, artist_names, album_names, track_ids, artist_ids, album_ids, release_dates, date_time_played, date_played, time_played, duration_in_ms, duration = ([] for i in range(12))
     transform_valid = True
 
     # loop through each track and append each attribute of the current track to the appropriate list
@@ -134,11 +142,19 @@ def transform_todays_tracks(raw_data):
             track_names.append(track['track']['name'])
             artist_names.append(track['track']['album']['artists'][0]['name'])
             album_names.append(track['track']['album']['name'])
+            track_ids.append(track['track']['id'])
+            artist_ids.append(track['track']['album']['artists'][0]['id'])
+            album_ids.append(track['track']['album']['id'])
             release_dates.append(track['track']['album']['release_date'])
             time_played_utc = track['played_at']
-            local_time_played, local_date_played = convert_to_local_time(time_played_utc)
+            local_date_time_played, local_date_played, local_time_played = convert_to_local_time(time_played_utc)
+            date_time_played.append(local_date_time_played)
             date_played.append(local_date_played)
             time_played.append(local_time_played)
+            duration_ms = track['track']['duration_ms']
+            duration_in_ms.append(duration_ms)
+            converted_duration = convert_duration(duration_ms)
+            duration.append(converted_duration)
     # otherwise, notify the user that an invalid token was provided
     except:
         print("There was a problem transforming your data.")
@@ -149,13 +165,20 @@ def transform_todays_tracks(raw_data):
         "track_name": track_names,
         "artist_name": artist_names,
         "album_name": album_names,
+        "track_id": track_ids,
+        "artist_id": artist_ids,
+        "album_id": album_ids,
         "release_date": release_dates,
+        "date_time_played": date_time_played,
         "date_played": date_played,
-        "time_played": time_played
+        "time_played": time_played,
+        "duration_in_ms": duration_in_ms,
+        "duration": duration
     }
 
     # store the data as a dataframe
-    track_df = pd.DataFrame(track_dict, columns=['track_name', 'artist_name', 'album_name', 'release_date', 'date_played', 'time_played'])
+    track_df = pd.DataFrame(track_dict, columns=['track_name', 'artist_name', 'album_name', 'track_id', 'artist_id', 'album_id',
+                                                 'release_date', 'date_time_played', 'date_played', 'time_played', 'duration_in_ms', 'duration'])
 
     # validate and return the data
     if check_data_is_valid(track_df) and transform_valid:
@@ -180,9 +203,15 @@ def load_todays_tracks(track_df):
             track_name VARCHAR(200),
             artist_name VARCHAR(200),
             album_name VARCHAR(200),
+            track_id VARCHAR(200),
+            artist_id VARCHAR(200),
+            album_id VARCHAR(200),
             release_date VARCHAR(200),
+            date_time_played VARCHAR(200),
             date_played VARCHAR(200),
-            time_played VARCHAR(200) PRIMARY KEY
+            time_played VARCHAR(200) PRIMARY KEY,
+            duration_in_ms INT,
+            duration VARCHAR(10)
         );
         """
     cursor.execute(create_query)
@@ -200,9 +229,15 @@ def load_todays_tracks(track_df):
             track_name VARCHAR(200),
             artist_name VARCHAR(200),
             album_name VARCHAR(200),
+            track_id VARCHAR(200),
+            artist_id VARCHAR(200),
+            album_id VARCHAR(200),
             release_date VARCHAR(200),
+            date_time_played VARCHAR(200),
             date_played VARCHAR(200),
-            time_played VARCHAR(200) PRIMARY KEY
+            time_played VARCHAR(200) PRIMARY KEY,
+            duration_in_ms INT,
+            duration VARCHAR(10)
         );
     """
     cursor.execute(create_today_query)

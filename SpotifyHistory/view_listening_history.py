@@ -10,7 +10,8 @@ def get_days_history(inp_date):
     '''
     # define the query depending on the desired date
     query = """
-        SELECT * FROM complete_listening_history WHERE date_played = "{inp_date}" ORDER BY time_played
+        SELECT track_name, artist_name, album_name, release_date, date_played, time_played, duration
+        FROM complete_listening_history WHERE date_played = "{inp_date}" ORDER BY time_played
     """.format(inp_date=inp_date)
     # establish a connection to the database
     engine = sqlalchemy.create_engine(DATABASE_LOCATION)

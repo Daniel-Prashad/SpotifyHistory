@@ -35,6 +35,7 @@ def main_menu():
     elif inp == '0':
         quit()
 
+
 def get_client_creds():
     '''() -> str, str
     This function reads and returns the client credential information from the .env file.
@@ -43,6 +44,7 @@ def get_client_creds():
     client_id = os.getenv("CLIENT_ID")
     client_secret = os.getenv("CLIENT_SECRET")
     return client_id, client_secret
+
 
 def etl_todays_tracks():
     '''() -> Nonetype
