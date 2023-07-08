@@ -37,11 +37,21 @@ def convert_duration(duration_ms):
     '''(int) -> str
     This function converts the duration of a song from milliseconds to minutes and seconds to be displayed to the user.
     '''
+    # store the seconds, minutes and hours
     secs = str(int(duration_ms/1000)%60)
     mins = str(int(duration_ms/(1000*60))%60)
+    hours = str(int(duration_ms/(1000*60*60))%24)
+    # if seconds is 1 digit (less than 10) then add a 0 before
     if len(secs) == 1:
-        secs = secs + "0"
-    duration_display = mins + ":" + secs
+        secs = "0" + secs
+    # if the duration is less than an hour than omit the number of hours
+    if duration_ms < 3600000:
+        duration_display = mins + ":" + secs
+    # otherwise include the number of hours and check if minutes is 1 digit (less than 10) then add a 0 before if so
+    else:
+        if len(mins) == 1:
+            mins = "0" + mins
+        duration_display = hours + ":" + mins + ":" + secs
     return(duration_display)
 
 
