@@ -44,6 +44,22 @@ def get_most_listened(column, limit):
     return(most_listened_df)
 
 
+def get_num_songs_by_time(time):
+    '''(str) -> int
+    Given the hour, this function returns the total number of songs that have been listened to at that hour throughout the user's listening history.
+    '''
+    query = """
+        SELECT COUNT(*) AS num_songs
+        FROM complete_listening_history
+        WHERE time_played LIKE "{time}:__:__:___"
+        """.format(time=time)
+    # establish a connection to the database
+    engine = sqlalchemy.create_engine(DATABASE_LOCATION)
+    # store and return the sum of listening duration for the given date
+    num_songs = pd.read_sql_query(sql=query, con=engine)
+    return(num_songs["num_songs"][0])
+
+
 def get_total_duration(date):
     '''(str) -> int
     Given a date, this function returns the total duration spent listening to music on that date in milliseconds.
@@ -84,13 +100,33 @@ def add_value_labels_scatter(durations_in_ms, duration_labels, plot):
             plot.text(i, durations_in_ms[i] + 200000, duration_labels[i], color="black")
 
 
+def plot_num_songs_by_time(time_labels, num_songs):
+    '''(list of str, list of int) -> Nonetype
+    This function outputs a bar chart showing the total number of songs played by time of day.
+    '''
+    # make a bar chart where the x-coordinates are the times of the day and the height of each bar is the corresponding number of songs played
+    plt.bar(time_labels, num_songs)
+    # set the title and axis labels
+    plt.title("Total Number of Songs Listened by Time of Day")
+    plt.ylabel("Total Number of Songs")
+    plt.xlabel("Time of Day")
+    # rotate the x ticks to be vertical
+    plt.xticks(rotation=90)
+    # label each of the bars with the corresponding number of songs
+    for i in range(len(num_songs)):
+        if num_songs[i] != 0:
+            plt.text(i, num_songs[i], num_songs[i])
+    # show the plot
+    plt.show()
+
+
 def plot_daily_duration(week_dates, durations_in_ms, duration_labels):
     '''(list of str, list of int, list of str) -> Nonetype
     This function outputs a bar chart showing the user's daily time spent listening to music for the given week.
     '''
     # store the days of the week in a list to be used as the x-axis labels
     days_of_week = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    # make a bar chart where the x-coordinates are the days of the week and the height each bar is the corresponding time spent listening to music
+    # make a bar chart where the x-coordinates are the days of the week and the height of each bar is the corresponding time spent listening to music
     plt.bar(days_of_week, durations_in_ms)
     # set the title and y-axis label
     plt.title("Time Spent Listening By Day For " + week_dates[0] + " to " + week_dates[6])

@@ -1,5 +1,5 @@
 from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks, get_access_token, authorize_user, convert_duration
-from SpotifyHistory.view_listening_history import get_days_history, get_most_listened, get_total_duration, plot_daily_duration, plot_weekly_comparison
+from SpotifyHistory.view_listening_history import get_days_history, get_most_listened, get_total_duration, plot_daily_duration, plot_weekly_comparison, get_num_songs_by_time, plot_num_songs_by_time
 import re
 import os
 from dotenv import load_dotenv
@@ -12,14 +12,15 @@ def main_menu():
     This function displays the menu options to the user, prompts for and returns the user's selection of one of these options.
     '''
     # define the list of options
-    options = ['0', '1', '2', '3', '4', '5']
+    options = ['0', '1', '2', '3', '4', '5', '6']
 
     # display the menu
     print("[1] - Add today's tracks to your all-time history")
     print("[2] - View your listening history from a certain day")
     print("[3] - View your most listened to tracks, artists or albums of all time")
-    print("[4] - View your listening time for the current week")
-    print("[5] - Compare your last two full weeks of listening history")
+    print("[4] - View your favourite times of day to listen to music")
+    print("[5] - View your listening time for the current week")
+    print("[6] - Compare your last two full weeks of listening history")
     print("[0] - Exit program")
 
     # prompt for, store and return the user's selection, ensuring that the input is valid
@@ -36,8 +37,10 @@ def main_menu():
     elif inp == '3':
         view_most_listened()
     elif inp == '4':
-        view_daily_duration_listened()
+        view_daily_listening_distribution()
     elif inp == '5':
+        view_daily_duration_listened()
+    elif inp == '6':
         compare_previous_two_weeks()
     elif inp == '0':
         quit()
@@ -161,6 +164,26 @@ def view_most_listened():
         # get and display the information of interest using the user's input
         most_listened_df = get_most_listened(options[inp], limit_options[limit_inp])
         print(tabulate(most_listened_df, headers="keys" ,tablefmt="fancy_outline"))
+
+
+def view_daily_listening_distribution():
+    '''() -> Nonetype
+    This function gets the data required and calls a function to output a bar chart showing the total number of songs played by time of day.
+    '''
+    # store each hour of the day to be used in string comparison and as a label
+    times = ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11",
+             "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"]
+    time_labels = ["12:00am", "1:00am", "2:00am", "3:00am", "4:00am", "5:00am", "6:00am", "7:00am", "8:00am", "9:00am", "10:00am", "11:00am",
+             "12:00pm", "1:00pm", "2:00pm", "3:00pm", "4:00pm", "5:00pm", "6:00pm", "7:00pm", "8:00pm", "9:00pm", "10:00pm", "11:00pm"]
+    num_songs = []
+    # for each hour of the day, get the number of songs played
+    for time in times:
+        num_songs.append(get_num_songs_by_time(time))
+    # store and output the time of day with the most songs played
+    fav_time_index = num_songs.index(max(num_songs))
+    print("Your favourite time to listen to music is around " + time_labels[fav_time_index] + " with " + str(max(num_songs)) + " songs.")
+    # output the bar chart showing the number of songs played by time of day
+    plot_num_songs_by_time(time_labels, num_songs)
 
 
 def view_daily_duration_listened():
