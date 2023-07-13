@@ -1,7 +1,9 @@
 from SpotifyHistory.etl_data import DATABASE_LOCATION
 import sqlalchemy
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 
 
 def get_days_history(inp_date):
@@ -58,12 +60,28 @@ def get_total_duration(date):
     return(duration_in_ms["total_duration"][0])
 
 
-def add_value_labels(durations_in_ms, duration_labels):
-    '''(list of int, list of str) -> Nonetype
-    This function adds value labels on the plot where duration_labels is the text to be added at the corresponding y-coordinate durations_in_ms.
+def add_value_labels(durations_in_ms, duration_labels, plot, double = False):
+    '''(list of int, list of str, matplotlib.axes._axes.Axes, Boolean) -> Nonetype
+    This function adds value labels on the bar graph where duration_labels is the text to be added at the corresponding y-coordinate durations_in_ms.
     '''
     for i in range(len(duration_labels)):
-        plt.text(i, durations_in_ms[i], duration_labels[i])
+        if double == False:
+            plot.text(i - 0.35/2, durations_in_ms[i], duration_labels[i])
+        else:
+            plot.text(i + 0.35/2, durations_in_ms[i], duration_labels[i])
+
+
+def add_value_labels_scatter(durations_in_ms, duration_labels, plot):
+    '''(list of int, list of str, matplotlib.axes._axes.Axes) -> Nonetype
+    This function adds value labels on the scatter plot where duration_labels is the text to be added at the corresponding y-coordinate durations_in_ms.
+    '''
+    for i in range(len(duration_labels)):
+        if durations_in_ms[i] > 0:
+            plot.text(i, durations_in_ms[i] + 200000, duration_labels[i], color="green")
+        elif durations_in_ms[i] < 0:
+            plot.text(i, durations_in_ms[i] - 200000*3, duration_labels[i], color="red")
+        else:
+            plot.text(i, durations_in_ms[i] + 200000, duration_labels[i], color="black")
 
 
 def plot_daily_duration(week_dates, durations_in_ms, duration_labels):
@@ -81,7 +99,66 @@ def plot_daily_duration(week_dates, durations_in_ms, duration_labels):
     ax = plt.gca()
     ax.set_yticks([])
     # add the value labels for each bar
-    add_value_labels(durations_in_ms, duration_labels)
+    add_value_labels(durations_in_ms, duration_labels, ax)
     # show the bar chart
     plt.show()
     
+
+def plot_weekly_comparison(all_dates, all_durations_in_ms, all_duration_labels, duration_differences, duration_difference_labels):
+    '''(list of str, list of int, list of str, list of int, list of str) -> Nonetype
+    This function outputs a double bar chart showing the user's daily time spent listening to music for the past two weeks
+    and a scatterplot comparing the time spent listening per day between the two weeks.
+    '''
+    # store the days of the week in a list to be used as the x-axis labels
+    days_of_week = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    # set the locations for the bars along the x-axis and the width of the bars
+    x = np.arange(len(days_of_week))
+    width = 0.35
+    # create a set of two subplots
+    fig, ax = plt.subplots(2,1)
+
+    # DOUBLE BAR CHART
+    # plot the bars in the first subplot
+    two_weeks_ago = ax[0].bar(x, all_durations_in_ms[0], width=width)
+    one_week_ago = ax[0].bar(x + width, all_durations_in_ms[1], width=width)
+    # set the title, axis labels and legend of the first subplot
+    ax[0].set_title("Comparing Time Spent Listening By Day For The Last Two Weeks")
+    ax[0].set_ylabel("Time Spent Listening")
+    ax[0].set_yticks([])
+    ax[0].set_xticks(x + width/2)
+    ax[0].set_xticklabels(days_of_week)
+    ax[0].legend((two_weeks_ago, one_week_ago), (all_dates[0][0] + " to " + all_dates[0][6], all_dates[1][0] + " to " + all_dates[1][6]))
+    # add the value labels for each bar
+    for i in range(len(all_duration_labels)):
+        if (i + 1) % 2 == 1:
+            add_value_labels(all_durations_in_ms[i], all_duration_labels[i], ax[0], False)
+        else:
+            add_value_labels(all_durations_in_ms[i], all_duration_labels[i], ax[0], True)
+    
+    # SCATTER PLOT
+    # define the colour to be used for each point and plot each point of the scatterplot on the second subplot
+    for i in range(len(duration_differences)):
+        if duration_differences[i] > 0:
+            colour = "green"
+        elif duration_differences[i] < 0:
+            colour = "red"
+        else:
+            colour = "black"
+        ax[1].scatter(days_of_week[i], duration_differences[i], color=colour)
+    # connect the points with a line
+    ax[1].plot(days_of_week, duration_differences, color="grey")
+    # add value labels for each point
+    add_value_labels_scatter(duration_differences, duration_difference_labels, ax[1])
+    # add a horizontal line at y=0
+    ax[1].axhline(0, color="grey", linestyle="--")
+    # set the title and axis labels for the second subplot
+    ax[1].set_title("Difference In Time Spent Listening By Day For " + all_dates[1][0] + " - " + all_dates[1][6] + " Compared To " + all_dates[0][0] + " - " + all_dates[0][6])
+    ax[1].set_ylabel("Difference In Time Spent Listening")
+    ax[1].set_yticks([])
+    # set the legend of the second subplot
+    legend_elements = [Line2D([0],[0], marker='o', color='white', markerfacecolor='green', label="Listened More Last Week"),
+                       Line2D([0],[0], marker='o', color='white', markerfacecolor='red', label="Listened Less Last Week")]
+    ax[1].legend(handles=legend_elements)
+
+    # show the two subplots
+    plt.show()

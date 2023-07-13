@@ -1,5 +1,5 @@
 from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks, get_access_token, authorize_user, convert_duration
-from SpotifyHistory.view_listening_history import get_days_history, get_most_listened, get_total_duration, plot_daily_duration
+from SpotifyHistory.view_listening_history import get_days_history, get_most_listened, get_total_duration, plot_daily_duration, plot_weekly_comparison
 import re
 import os
 from dotenv import load_dotenv
@@ -12,13 +12,14 @@ def main_menu():
     This function displays the menu options to the user, prompts for and returns the user's selection of one of these options.
     '''
     # define the list of options
-    options = ['0', '1', '2', '3', '4', '9']
+    options = ['0', '1', '2', '3', '4', '5']
 
     # display the menu
     print("[1] - Add today's tracks to your all-time history")
     print("[2] - View your listening history from a certain day")
     print("[3] - View your most listened to tracks, artists or albums of all time")
     print("[4] - View your listening time for the current week")
+    print("[5] - Compare your last two full weeks of listening history")
     print("[0] - Exit program")
 
     # prompt for, store and return the user's selection, ensuring that the input is valid
@@ -36,6 +37,8 @@ def main_menu():
         view_most_listened()
     elif inp == '4':
         view_daily_duration_listened()
+    elif inp == '5':
+        compare_previous_two_weeks()
     elif inp == '0':
         quit()
 
@@ -177,4 +180,54 @@ def view_daily_duration_listened():
         duration_labels.append(convert_duration(duration_in_ms))
     # output the bar graph
     plot_daily_duration(week_dates, durations_in_ms, duration_labels)
+
+
+def compare_previous_two_weeks():
+    '''() -> Nonetype
+    This function gets the data required and calls a function to output a double bar chart showing the user's daily time spent listening to music for the past two weeks
+    and a scatterplot comparing the time spent listening per day between the two weeks.
+    '''
+    # store today's date and set the offsets to calculate the dates for the past two weeks
+    today = datetime.datetime.now().date()
+    offset = [14, 7]
+    # initialize the lists to store all the dates, durations spent listening and duration labels
+    all_dates = []
+    all_durations_in_ms = []
+    all_duration_labels = []
+    # get the date for each day in the past two full weeks
+    for i in range(len(offset)):
+        durations_in_ms = []
+        duration_labels = []
+        date = today - datetime.timedelta(days=offset[i])
+        week_dates = [d for d in get_week_dates(date)]
+        # get the duration listened and duration labels for each date
+        for d in week_dates:
+            duration_in_ms = get_total_duration(d)
+            durations_in_ms.append(duration_in_ms)
+            duration_labels.append(convert_duration(duration_in_ms))
+        # add all the data to the corresponding main list
+        all_dates.append(week_dates)
+        all_durations_in_ms.append(durations_in_ms)
+        all_duration_labels.append(duration_labels)
+
+    #################################################################################### TESTING ####################################################################################
+    #all_durations_in_ms = [[3600000, 4000000, 7200000, 8000000, 5400000, 3050000, 9250000], [7074553, 3959502, 4138418, 8523539, 9468900, 7746597, 3277002]]
+    #all_duration_labels = [["1:00:00", "1:06:40", "2:00:00", "2:13:20", "1:30:00", "50:50", "2:34:10"], ["1:57:54", "1:05:59", "1:08:58", "2:22:03", "2:37:48", "2:09:06", "54:37"]]
+    #################################################################################### TESTING ####################################################################################
     
+    # split the durations of each week into separate lists
+    durations_one_wk_ago = all_durations_in_ms[1]
+    durations_two_wks_ago = all_durations_in_ms[0]
+    # calculate and store the difference in time spent listening between one week ago and two weeks ago for each day of the week
+    duration_differences = [durations_one_wk_ago_i - durations_two_wks_ago_i for durations_one_wk_ago_i, durations_two_wks_ago_i in zip(durations_one_wk_ago, durations_two_wks_ago)]
+    # convert each difference from milliseconds to H:M:S
+    duration_difference_labels = []
+    for d in duration_differences:
+        duration_difference_labels.append(convert_duration(abs(d)))
+    # calculate and output the total weekly difference in time spent listening
+    weekly_difference_ms = sum(duration_differences)
+    weekly_difference = convert_duration(abs(weekly_difference_ms))
+    more_or_less = " more" if weekly_difference_ms >= 0 else " less"
+    print("You spent a total of " + weekly_difference + more_or_less + " listening from " + all_dates[1][0] + " to " + all_dates[1][6] + " than from " + all_dates[0][0] + " to " + all_dates[0][6] + ".")
+    # output the two graphs
+    plot_weekly_comparison(all_dates, all_durations_in_ms, all_duration_labels, duration_differences, duration_difference_labels)
