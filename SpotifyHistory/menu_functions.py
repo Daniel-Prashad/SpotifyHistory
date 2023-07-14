@@ -1,10 +1,10 @@
 from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks, get_access_token, authorize_user, convert_duration
 from SpotifyHistory.view_listening_history import get_days_history, get_most_listened, get_total_duration, plot_daily_duration, plot_weekly_comparison, get_num_songs_by_time, plot_num_songs_by_time
+import datetime
 import re
 import os
 from dotenv import load_dotenv
 from tabulate import tabulate
-import datetime
 
 
 def main_menu():
@@ -15,6 +15,8 @@ def main_menu():
     options = ['0', '1', '2', '3', '4', '5', '6']
 
     # display the menu
+    os.system("cls")
+    print("MAIN MENU")
     print("[1] - Add today's tracks to your all-time history")
     print("[2] - View your listening history from a certain day")
     print("[3] - View your most listened to tracks, artists or albums of all time")
@@ -29,7 +31,7 @@ def main_menu():
         inp = input("Please select one of the options above: ")
         if inp in options:
             run = False
-
+    os.system("cls")
     if inp == '1':
         etl_todays_tracks()
     elif inp == '2':
@@ -93,6 +95,7 @@ def etl_todays_tracks():
         if data_valid:
             load_todays_tracks(track_df)
             print("Today's tracks successfully loaded!")
+            input("Press [Enter] to return to the main menu: ")
         else:
             print("Today's tracks were not loaded!")
             print("It looks like there were no new songs to add.")
@@ -108,7 +111,7 @@ def view_days_history():
     # ensure that the date provided is valid
     run = True
     while run:
-        inp_date = input("Please enter day for which you would like to see your listening history in YYYY-mm-dd format (or type 'quit' to return to the main menu): ")
+        inp_date = input("Please enter the date for which you would like to see your listening history in YYYY-mm-dd format (or type 'quit' to return to the main menu): ")
         if inp_date.lower() == 'quit':
             main_menu()
             run = False
@@ -123,6 +126,8 @@ def view_days_history():
             print("There are no recorded songs for this date.")
         else:
             print(tabulate(df, headers="keys", tablefmt="fancy_outline"))
+        input("Press [Enter] to return to the main menu: ")
+        main_menu()
 
 
 def view_most_listened():
@@ -163,7 +168,10 @@ def view_most_listened():
 
         # get and display the information of interest using the user's input
         most_listened_df = get_most_listened(options[inp], limit_options[limit_inp])
+        os.system('cls')
         print(tabulate(most_listened_df, headers="keys" ,tablefmt="fancy_outline"))
+        input("Press [Enter] to return to the main menu: ")
+        main_menu()
 
 
 def view_daily_listening_distribution():
@@ -182,8 +190,10 @@ def view_daily_listening_distribution():
     # store and output the time of day with the most songs played
     fav_time_index = num_songs.index(max(num_songs))
     print("Your favourite time to listen to music is around " + time_labels[fav_time_index] + " with " + str(max(num_songs)) + " songs.")
+    print("\nPlease close the graph to return to the main menu.")
     # output the bar chart showing the number of songs played by time of day
     plot_num_songs_by_time(time_labels, num_songs)
+    main_menu()
 
 
 def view_daily_duration_listened():
@@ -201,8 +211,10 @@ def view_daily_duration_listened():
         duration_in_ms = get_total_duration(date)
         durations_in_ms.append(duration_in_ms)
         duration_labels.append(convert_duration(duration_in_ms))
+    print("Please close the graph to return to the main menu.")
     # output the bar graph
     plot_daily_duration(week_dates, durations_in_ms, duration_labels)
+    main_menu()
 
 
 def compare_previous_two_weeks():
@@ -252,5 +264,7 @@ def compare_previous_two_weeks():
     weekly_difference = convert_duration(abs(weekly_difference_ms))
     more_or_less = " more" if weekly_difference_ms >= 0 else " less"
     print("You spent a total of " + weekly_difference + more_or_less + " listening from " + all_dates[1][0] + " to " + all_dates[1][6] + " than from " + all_dates[0][0] + " to " + all_dates[0][6] + ".")
+    print("\nPlease close the graph to return to the main menu.")
     # output the two graphs
     plot_weekly_comparison(all_dates, all_durations_in_ms, all_duration_labels, duration_differences, duration_difference_labels)
+    main_menu()
