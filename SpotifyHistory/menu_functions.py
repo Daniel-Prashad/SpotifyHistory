@@ -1,8 +1,9 @@
 from SpotifyHistory.etl_data import extract_todays_tracks, transform_todays_tracks, load_todays_tracks, get_access_token, authorize_user, convert_duration
 from SpotifyHistory.view_listening_history import get_days_history, get_most_listened, get_total_duration, plot_daily_duration, plot_weekly_comparison, get_num_songs_by_time, plot_num_songs_by_time
 import datetime
-import re
+import math
 import os
+import re
 from dotenv import load_dotenv
 from tabulate import tabulate
 
@@ -71,6 +72,32 @@ def get_week_dates(date):
     for i in range(7):
         yield date.isoformat() 
         date += datetime.timedelta(days=1)
+
+
+def t_test(durations_one_wk_ago, durations_two_wks_ago):
+    '''(list of int, list of int) -> float, float, str
+    This function calculates the t-value and determines whether there is a significant difference in the user's last two full weeks of listening time.
+    '''
+    # define the null and alternative hypotheses
+    hypothesis_null = "Since the calculated t-value is less than the critical t-value, there is no significant difference in your weekly listening times."
+    hypothesis_alt = "Since the calculated t-value is greater than the critical t-value, there is a significant difference in your weekly listening times."
+    # since these are undirected hypotheses, with a significance level of 0.05 and degrees of freedom of 7-1=6,
+    # the t_crit value is retreieved from column t_0.975, row 6 of the t-table
+    t_crit = 2.447
+    # calculate the mean of differences in listening times between the two weeks
+    daily_diffs = [dur_1 - dur_2 for (dur_1, dur_2) in zip(durations_one_wk_ago, durations_two_wks_ago)]
+    sample_mean = sum(daily_diffs)/len(daily_diffs)
+    # calculate the standard deviation, standard error and t_value
+    running_sum = 0
+    for diff in daily_diffs:
+        running_sum += (diff-sample_mean)**2
+    std_dev = math.sqrt(running_sum/(len(daily_diffs)-1))
+    std_error = std_dev/math.sqrt(len(daily_diffs))
+    t_stat = round(sample_mean/std_error, 3)
+    # define the correct hypothesis depending on the calculated t_value
+    result = hypothesis_null if abs(t_stat) < t_crit else hypothesis_alt
+    # return the calculated t_value, critical value and outcome
+    return(t_stat, t_crit, result)
 
 
 def etl_todays_tracks():
@@ -211,7 +238,10 @@ def view_daily_duration_listened():
         duration_in_ms = get_total_duration(date)
         durations_in_ms.append(duration_in_ms)
         duration_labels.append(convert_duration(duration_in_ms))
-    print("Please close the graph to return to the main menu.")
+    # calculate and output the total listening time for the current week
+    total_duration = convert_duration(sum(durations_in_ms))
+    print("Your total listening for this week is currently " + total_duration)
+    print("\nPlease close the graph to return to the main menu.")
     # output the bar graph
     plot_daily_duration(week_dates, durations_in_ms, duration_labels)
     main_menu()
@@ -264,6 +294,14 @@ def compare_previous_two_weeks():
     weekly_difference = convert_duration(abs(weekly_difference_ms))
     more_or_less = " more" if weekly_difference_ms >= 0 else " less"
     print("You spent a total of " + weekly_difference + more_or_less + " listening from " + all_dates[1][0] + " to " + all_dates[1][6] + " than from " + all_dates[0][0] + " to " + all_dates[0][6] + ".")
+    
+    # calculate the t-value and output the result
+    t_stat, t_crit, result = t_test(durations_one_wk_ago, durations_two_wks_ago)
+    print("\nt-Test Result:")
+    print("t-stat: " + str(t_stat))
+    print("t_crit: " + str(t_crit))
+    print(result)
+
     print("\nPlease close the graph to return to the main menu.")
     # output the two graphs
     plot_weekly_comparison(all_dates, all_durations_in_ms, all_duration_labels, duration_differences, duration_difference_labels)
