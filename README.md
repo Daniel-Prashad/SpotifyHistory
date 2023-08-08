@@ -25,5 +25,5 @@ This program creates and manages a database containing the user's Spotify listen
    * python main.py
 5. To add the current day's listening history:
    * Select the first option from the menu
-   * This will open a webpage with the URL: "http://localhost:8888/callback?code=[generated code]"
+   * This will open a webpage with the URL: "ht<span>tp://</span>localhost:8888/callback?code=[generated code]"
    * Copy and paste the entire generated code into the terminal and press [Enter]
